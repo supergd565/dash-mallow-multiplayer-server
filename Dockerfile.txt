@@ -1,0 +1,32 @@
+FROM ubuntu:24.04
+
+# Instalar dependencias necesarias
+RUN apt-get update && apt-get install -y \
+	curl \
+	unzip \
+	ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Definir variables de versión de Godot
+ARG GODOT_VERSION=4.3
+ARG RELEASE=stable
+ARG GODOT_URL=https://github.com{GODOT_VERSION}-${RELEASE}/Godot_v${GODOT_VERSION}-${RELEASE}_linux.x86_64.zip
+
+# Descargar y configurar el ejecutable de Godot
+RUN curl -sL ${GODOT_URL} -o godot.zip \
+	&& unzip godot.zip \
+	&& mv Godot_v* /usr/local/bin/godot \
+	&& chmod +x /usr/local/bin/godot \
+	&& rm godot.zip
+
+WORKDIR /app
+
+# Copiar todo el proyecto Godot al contenedor
+COPY . /app
+
+# Render asigna el puerto dinámicamente, pero puedes definir un fallback
+ENV PORT=10000
+EXPOSE 10000
+
+# Ejecutar Godot pasándole el puerto de Render como argumento si tu script lo requiere
+CMD ["godot", "--headless", "--path", "/app"]
