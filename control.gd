@@ -1,6 +1,7 @@
 extends Control
 
 var peer = WebSocketMultiplayerPeer.new()
+var server_http = TCPServer.new() # Servidor dedicado únicamente a responder a Render
 
 # Diccionario de salas. Estructura: 
 # { "CODIGO_SALA": [id_jugador1, id_jugador2, ...], ... }
@@ -11,21 +12,38 @@ var salas = {}
 var jugadores_en_sala = {}
 
 func _ready():
-	# CORRECCIÓN: Leemos PORT_INTERNO (10005) para no colisionar con el puerto 10000 de Nginx
-	var port = OS.get_environment("PORT_INTERNO")
-	if port == "":
-		port = "10005" # Puerto local de respaldo por defecto
-	var port_int = port.to_int()
+	# 1. LEER EL PUERTO PRINCIPAL DE RENDER (10000) PARA EL HEALTH CHECK
+	var port_render = OS.get_environment("PORT")
+	if port_render == "":
+		port_render = "10000"
+	var port_render_int = port_render.to_int()
 	
-	print("Iniciando servidor en puerto interno: ", port_int)
-	var error = peer.create_server(port_int)
+	print("Iniciando respondedor HTTP nativo para Render en puerto: ", port_render_int)
+	var err_http = server_http.listen(port_render_int)
+	if err_http != OK:
+		print("Error al levantar el respondedor HTTP de Render: ", err_http)
+	
+	# 2. INICIAR EL SERVIDOR DE JUEGO MULTIJUGADOR EN EL PUERTO SEGURO 10005
+	var port_juego_int = 10005
+	print("Iniciando servidor de WebSockets para jugadores en puerto: ", port_juego_int)
+	
+	var error = peer.create_server(port_juego_int)
 	if error != OK:
-		print("Error al crear el servidor: ", error)
+		print("Error al crear el servidor de juego: ", error)
 		return
 		
 	multiplayer.multiplayer_peer = peer
 	multiplayer.peer_disconnected.connect(_on_player_disconnected)
-	print("Servidor escuchando exitosamente detrás de Nginx.")
+	print("Servidor de juego escuchando exitosamente.")
+
+func _process(_delta):
+	# Responder de forma nativa e inmediata al Health Check de Render
+	if server_http.is_connection_available():
+		var conexion = server_http.take_connection()
+		if conexion:
+			var respuesta = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK"
+			conexion.put_data(respuesta.to_utf8_buffer())
+			conexion.disconnect_from_host()
 
 # Registrar cuando un jugador se desconecta para limpiarlo de la sala
 func _on_player_disconnected(id):
