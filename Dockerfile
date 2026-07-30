@@ -1,11 +1,12 @@
 FROM ubuntu:24.04
 
-# 1. Instalar herramientas del sistema y dependencias de red
+# 1. Instalar herramientas del sistema, red y librerías gráficas de bajo nivel requeridas por Godot
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     ca-certificates \
     netcat-openbsd \
+    libfontconfig1 \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Configurar la descarga usando variables limpias independientes
