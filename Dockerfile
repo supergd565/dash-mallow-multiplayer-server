@@ -8,21 +8,28 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Descargar, descomprimir y configurar Godot 4.3 estable de consola directamente
-RUN curl -sL "https://github.com" -o godot.zip \
-    && unzip godot.zip \
+# 2. Configurar la descarga usando variables limpias independientes
+ENV G_HOST=https://github.com
+ENV G_PATH=/godotengine/godot/releases/download/4.3-stable
+ENV G_FILE=Godot_v4.3-stable_linux.x86_64.zip
+
+# 3. Descargar usando las variables estructuradas
+RUN curl -sL "${G_HOST}${G_PATH}/${G_FILE}" -o godot.zip
+
+# 4. Descomprimir e instalar el ejecutable
+RUN unzip godot.zip \
     && mv Godot_v* /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
     && rm godot.zip
 
-# 3. Establecer el directorio de trabajo y copiar tu proyecto
+# 5. Establecer el directorio de trabajo y copiar tu proyecto
 WORKDIR /app
 COPY . /app
 
-# 4. Configurar el puerto dinámico requerido por Render
+# 6. Configurar el puerto dinámico requerido por Render
 ENV PORT=10000
 EXPOSE 10000
 
-# 5. Ejecutar Godot en segundo plano Y responder con HTTP 200 OK a Render para evitar bloqueos
+# 7. Ejecutar Godot en segundo plano Y responder con HTTP 200 OK a Render
 CMD godot --headless --path /app & \
     while true; do echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nOK" | nc -l -p $PORT; done
