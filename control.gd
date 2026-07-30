@@ -13,7 +13,7 @@ var jugadores_en_sala = {}
 func _ready():
 	var port = OS.get_environment("PORT")
 	if port == "":
-		port = "10000"
+		port = "10005"
 	var port_int = port.to_int()
 	
 	print("Iniciando servidor en puerto: ", port_int)
