@@ -11,12 +11,13 @@ var salas = {}
 var jugadores_en_sala = {}
 
 func _ready():
-	var port = OS.get_environment("PORT")
+	# CORRECCIÓN: Leemos PORT_INTERNO (10005) para no colisionar con el puerto 10000 de Nginx
+	var port = OS.get_environment("PORT_INTERNO")
 	if port == "":
-		port = "10005"
+		port = "10005" # Puerto local de respaldo por defecto
 	var port_int = port.to_int()
 	
-	print("Iniciando servidor en puerto: ", port_int)
+	print("Iniciando servidor en puerto interno: ", port_int)
 	var error = peer.create_server(port_int)
 	if error != OK:
 		print("Error al crear el servidor: ", error)
@@ -24,7 +25,7 @@ func _ready():
 		
 	multiplayer.multiplayer_peer = peer
 	multiplayer.peer_disconnected.connect(_on_player_disconnected)
-	print("Servidor escuchando exitosamente.")
+	print("Servidor escuchando exitosamente detrás de Nginx.")
 
 # Registrar cuando un jugador se desconecta para limpiarlo de la sala
 func _on_player_disconnected(id):
